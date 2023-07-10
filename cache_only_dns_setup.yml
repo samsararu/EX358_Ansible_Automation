@@ -1,0 +1,46 @@
+---
+- name: Configure a caching nameserver
+  hosts: 192.168.122.193
+  vars:
+    access: "192.168.122.0/24 allow"
+    faddress: 192.168.122.180
+    domain: internal.virtnet
+  become: true
+  tasks:
+    - name: Install the unbound package
+      ansible.builtin.dnf:
+        name: unbound
+        state: latest
+
+    - name: Start and enable the service
+      ansible.builtin.service:
+        name: unbound
+        state: started
+        enabled: true
+
+    - name: Copy the template file
+      ansible.builtin.template:
+        src: ./templates/unbound.conf.j2
+        dest: /etc/unbound/unbound.conf.j2
+        owner: root
+        group: root
+        mode: 0644
+        force: yes
+      notify: restart_unbound
+
+    - name: Verify for syntax check
+      ansible.builtin.command: /usr/sbin/unbound-checkconf
+      changed_when: false
+
+    - name: Add the service to the firewall
+      ansible.posix.firewalld:
+        service: dns
+        state: enabled
+        permanent: true
+        immediate: true
+
+  handlers:
+    - name: restart_unbound
+      ansible.builtin.service:
+        name: unbound
+        state: restarted
