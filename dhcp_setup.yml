@@ -1,0 +1,39 @@
+---
+- name: Install and Configure DHCP Server
+  hosts: 192.168.122.193
+  vars:
+    subnet: 192.168.122.0
+    netmask: 255.255.255.0
+    srange: 192.168.122.38
+    erange: 192.168.122.42
+    optdns: 8.8.8.8
+    domain: "internal.example.com"
+    gateway: 192.168.122.1
+    broaddr: 192.168.122.255
+    node: rhel4
+    macaddr: "52:54:00:7b:0e:8c"
+    statip: 192.168.122.40
+  become: true
+  tasks:
+    - name: Install dhcp-server package
+      ansible.builtin.dnf:
+        name: dhcp-server
+        state: latest
+
+    - name: Set subnet configuration of DHCP-Server
+      ansible.builtin.template:
+        src: ./templates/dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+
+    - name: Start and enable the service
+      ansible.builtin.service:
+        name: dhcpd
+        state: started
+        enabled: true
+
+    - name: Open firewall rules
+      ansible.posix.firewalld:
+        service: dhcp
+        state: enabled
+        permanent: true
+        immediate: true
