@@ -1,0 +1,48 @@
+---
+- name: Ensure /data is mounted from rhel1 iSCSI target that was created manually onto rhel2
+  hosts: iscsi_user
+  become: true
+  tasks:
+    - name: the iscsi-initiator-utils is installed
+      yum:
+        name: iscsi-initiator-utils
+        state: latest
+
+    - name: enable the services
+      service:
+        name: "{{ item }}"
+        enabled: true
+      loop:
+        - iscsi
+        - iscsid
+
+    - name: the IQN is set for the initiator
+      template:
+        src: templates/initiatorname.iscsi.j2
+        dest: /etc/iscsi/initiatorname.iscsi
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart_iscsid
+
+    - name: Flush handlers
+      meta: flush_handlers
+
+    - name: Create mount directory for /data
+      file:
+        path: /data
+        state: directory
+        mode: '0755'
+
+    - name: Discover targets to store information locally
+      command:
+        cmd: iscsiadm --mode discoverydb --type sendtargets --portal 192.168.122.193 --discover
+
+    - name: Logging into target
+      command: iscsiadm --mode node --targetname iqn.2023-07.virtnet.internal:disk --portal 192.168.122.193:3260 --login
+
+  handlers:
+    - name: restart_iscsid
+      service:
+        name: iscsid
+        state: restarted
