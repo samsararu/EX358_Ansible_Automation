@@ -1,0 +1,22 @@
+$TTL 86400
+@       IN      SOA     ns1.internal.virtnet.   root.internal.virtnet. (
+        2023070900; serial 
+        3600; Refresh
+        1800; Retry
+        604800; Expire
+        86400; Minimum TTL
+)
+
+; Name Server Information
+@       IN      NS      ns1.internal.virtnet.
+; IP Address for Name Server
+ns1     IN      A       192.168.122.193
+masterdns       IN      A       192.168.122.193
+; Mail Server MX (Mail Exchange) Record
+internal.virtnet        IN      MX      10      mail.internal.virtnet.
+; A Record for the following hostname
+www     IN      A       192.168.122.50
+control	IN	A	192.168.122.183
+mail    IN      A       192.168.122.60
+; CNAME Record (alias pointing to actual name)
+ftp     IN      CNAME   www.internal.virtnet.
