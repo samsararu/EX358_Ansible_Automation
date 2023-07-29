@@ -1,0 +1,48 @@
+---
+- name: VirtualHost Setup 
+  hosts: all
+  become: true
+  tasks:
+    - name: install httpd
+      ansible.builtin.dnf:
+        name: httpd
+        state: latest
+
+    - name: start and enable httpd
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: install vhost config file
+      ansible.builtin.template:
+        src: ./templates/vhost.j2
+        dest: /etc/httpd/conf.d/vhost.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: restart_httpd
+
+    - name: create a DocumentRoot directory
+      ansible.builtin.file:
+        path: /var/www/vhosts/{{ ansible_facts['hostname'] }}
+        state: directory
+
+    - name: Create an index.html file
+      ansible.builtin.copy:
+        content: "welcome to virtual host"
+        dest: /var/www/vhosts/{{ ansible_facts['hostname'] }}/index.html
+
+    - name: Add firewall rules
+      ansible.posix.firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
+  handlers:
+    - name: restart_httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+
