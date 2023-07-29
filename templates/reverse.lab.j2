@@ -1,0 +1,18 @@
+$TTL 86400
+@       IN      SOA     ns1.internal.virtnet.   root.internal.virtnet. (
+        2023070900; serial
+        3600; Refresh
+        1800; Retry
+        604800; Expire
+        86400; Minimum TTL
+)
+; Name Server Information
+@       IN      NS      ns1.internal.virtnet.
+@       IN      PTR     internal.virtnet.
+ns1     IN      A       192.168.122.193
+; Reverse lookup for Name Server
+180     IN      PTR     ns1.internal.virtnet.
+183	IN	PTR	control.internal.virtnet.
+; PTR Record IP Address to Hostname
+50      IN      PTR     www.internal.virtnet.
+60      IN      PTR     mail.internal.virtnet.
