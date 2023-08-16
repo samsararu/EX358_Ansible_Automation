@@ -26,7 +26,7 @@
         enabled: true
 
     - name: Open firewall for NFS-Server
-      ansible.builtin.firewalld:
+      ansible.posix.firewalld:
         service: "{{ item }}"
         immediate: true
         permanent: true
