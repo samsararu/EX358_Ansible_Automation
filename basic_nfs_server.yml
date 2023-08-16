@@ -1,0 +1,37 @@
+---
+- name: Deploy Basic NFS Server
+  hosts: 192.168.122.193
+  become: true
+  tasks:
+    - name: Make sure Directory exists
+      ansible.builtin.file:
+        path: /share/folder
+        owner: root
+        state: directory
+
+    - name: Install nfs utilities
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: latest
+
+    - name: the directory is shared
+      ansible.builtin.copy:
+        content: "/share/folder *(rw,no_root_squash)\n"
+        dest: /etc/exports
+
+    - name: Start and enable NFS Service
+      ansible.builtin.service:
+        name: nfs-server
+        state: started
+        enabled: true
+
+    - name: Open firewall for NFS-Server
+      ansible.builtin.firewalld:
+        service: "{{ item }}"
+        immediate: true
+        permanent: true
+        state: enabled
+      loop:
+        - nfs
+        - rpc-bind
+        - mountd
