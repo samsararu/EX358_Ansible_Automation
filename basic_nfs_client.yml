@@ -1,0 +1,17 @@
+---
+- name: Mount the NFS Share
+  hosts: clients
+  become: true
+  tasks:
+    - name: Install nfs utilities
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: latest
+
+    - name: Add the NFS share and mount it with fstab
+      ansible.posix.mount:
+        path: /share
+        src: 192.168.122.193:/share/folder
+        state: mounted
+        opts: _netdev
+        fstype: nfs
