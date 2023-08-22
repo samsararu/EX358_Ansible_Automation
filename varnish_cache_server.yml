@@ -1,0 +1,106 @@
+---
+- name: Varnish Cache for Apache HTTP Server
+  hosts: 192.168.122.193
+  become: true
+  tasks:
+    - name: Setup static hostname
+      hostname:
+        name: varnish.example.com
+        use: systemd
+
+    - name: Making entries in the /etc/hosts file
+      lineinfile:
+        dest: /etc/hosts
+        line: 192.168.122.193 varnish.example.com varnish
+        insertafter: EOF
+
+    - name: Install Apache,SELinux Policy packages & varnish
+      dnf:
+        name: 
+          - httpd
+          - policycoreutils-python-utils
+          - varnish
+        state: latest
+
+    - name: Creating /sampleweb/ directory for the document root (Non-default Document Root Case)
+      file:
+        path: /sampleweb/
+        mode: '0755'
+        state: directory
+        owner: apache
+        group: apache
+
+    - name: Creating the website index file in the /sampleweb/ directory
+      copy:
+        dest: "/sampleweb/index.html"
+        content: |
+         <i>This page is available through varnish cache.</i>
+
+    - name: Creating httpd configuration file in the /etc/httpd/conf.d/ directory
+      copy:
+        dest: "/etc/httpd/conf.d/httpd.conf"
+        content: |
+          <VirtualHost 192.168.122.193:8080>
+           DocumentRoot "/sampleweb/"
+           ServerAdmin root@varnish.example.com
+           ServerAlias example.com varnish
+           ServerName varnish.example.com
+           ErrorLog logs/varnish.example.com-error_log
+           CustomLog logs/varnish.example.com-access_log common
+           <Directory /sampleweb/>
+           Options Indexes FollowSymLinks
+           AllowOverride None
+           Require all granted
+           </Directory>
+           </VirtualHost>
+    
+    - name: Copying /etc/httpd/conf/httpd.conf file using jinja
+      template:
+        src: templates/httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+        force: true
+
+    - name: Allowing Apache to modify the files in the /sampleweb/ directory
+      sefcontext:
+        target: '/sampleweb(/.*)?'
+        setype: httpd_sys_content_t
+        state: present
+
+    - name: Apply new SELinux file context
+      command: restorecon -Rv /sampleweb/
+
+    - name: Allowing HTTP traffic in the firewalld
+      firewalld:
+        service: http
+        zone: public
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Start and enable the httpd service
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Making changes in the varnish cache /etc/varnish/default.vcl file
+      replace:
+        dest: /etc/varnish/default.vcl
+        regexp: '^.port ='
+        replace: '.port = "8080";'
+
+    - name: Creating systemd unit file for varnish service
+      template:
+        src: templates/varnish.service.j2
+        dest: /etc/systemd/system/varnish.service
+
+    - name: Reload the Systemd to re-read the configuration
+      systemd:
+        daemon-reload: yes
+
+    - name: Start and enable the varnish service
+      service:
+        name: varnish
+        state: started
+        enabled: true
+
