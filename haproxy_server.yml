@@ -1,0 +1,113 @@
+---
+- name: Install and configure Apache httpd
+  hosts: node1
+  become: true
+  tasks:
+    - name: Install Apache httpd
+      dnf:
+        name: httpd
+        state: latest
+
+    - name: Copy Apache httpd web server configuration
+      template:
+        src: templates/httpd.j2
+        dest: /etc/httpd/conf.d/website.conf
+
+    - name: Create web server directory
+      file:
+        path: /srv/website/www
+        state: directory
+        mode: '0755'
+
+    - name: Copy Apache httpd web server index.html
+      copy:
+        content: "This is teh Apache httpd web server!!!"
+        dest: /srv/website/www/index.html
+
+    - name: Restore SELinux
+      command: restorecon -rv /srv/
+
+    - name: Add firewall rules
+      firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
+    - name: Start and enable Apache httpd
+      service:
+        name: httpd
+        state: started
+        enabled: true
+
+- name: Install and configure nginx
+  hosts: node2
+  become: true
+  tasks:
+    - name: Install Nginx
+      dnf:
+        name: nginx
+        state: latest
+
+    - name: Create web server directory
+      file:
+        path: /srv/website/www
+        state: directory
+        mode: '0755'
+
+# /etc/nginx/conf.d/*.conf method doesn't work well with haproxy
+# so define alternate DocumentRoot in the main configuration file
+ 
+    - name: Copy Nginx web server configuration
+      template:
+        src: templates/nginx.j2
+        dest: /etc/nginx/nginx.conf
+        force: true
+
+    - name: Copy Nginx web server index.html
+      copy:
+        content: "Nginx for the WIN!!!"
+        dest: /srv/website/www/index.html
+
+    - name: Restore SELinux
+      command: restorecon -rv /srv/
+
+    - name: Add firewall rules
+      firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
+    - name: Start and enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+- name: Install and configure haproxy
+  hosts: node3
+  become: true
+  tasks:
+    - name: Install haproxy
+      dnf:
+        name: haproxy
+        state: latest
+
+    - name: Copy configuration file for haproxy
+      template:
+        src: templates/haproxy.j2
+        dest: /etc/haproxy/haproxy.cfg
+
+    - name: Add firewall rules
+      firewalld:
+        service: http
+        state: enabled
+        permanent: true
+        immediate: true
+
+    - name: Start and enable haproxy
+      service:
+        name: haproxy
+        state: started
+        enabled: true
