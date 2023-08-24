@@ -1,0 +1,9 @@
+<Directory /srv/website/www>
+	Require all granted
+	AllowOverride None
+</Directory>
+
+<VirtualHost 192.168.177.198:80>
+	DocumentRoot /srv/website/www/
+	ServerName node1.example.com
+</VirtualHost>
